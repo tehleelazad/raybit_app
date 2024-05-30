@@ -1,0 +1,187 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class CurlController extends Controller
+{
+    public function requestData()
+    {
+        // URL to request
+        $url = 'https://api.weather.com/forecast';
+
+        // Initialize cURL session
+        $ch = curl_init($url);
+
+        // Set options for cURL session
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // Execute the cURL session
+        $response = curl_exec($ch);
+
+        // Check for cURL errors
+        if ($response === false) {
+            // Handle cURL error
+            $error = curl_error($ch);
+            curl_close($ch);
+            // Handle the error, log it, or return an error response
+            return response()->json(['error' => $error], 500);
+        }
+
+        // Get HTTP status code
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // Check for HTTP errors
+        if ($httpCode >= 400) {
+            // Handle HTTP error
+            curl_close($ch);
+            // Handle the error, log it, or return an error response
+            return response()->json(['error' => 'HTTP Error: ' . $httpCode], $httpCode);
+        }
+
+        // Close cURL session
+        curl_close($ch);
+
+        // Handle the successful response
+        return response()->json(['data' => $response], 200);
+    }
+}
+
+
+
+
+ public function updateData(Request $request, $id)
+    {
+        // Find the submitted data by ID
+        $submittedData = SubmittedData::find($id);
+
+        // Check if submitted data exists
+        if (!$submittedData) {
+            return response()->json(['error' => 'Submitted data not found'], 404);
+        }
+
+        // Validation rules
+        $rules = [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ];
+
+        // Validation messages
+        $messages = [
+            'name.required' => 'The name field is required.',
+            'name.string' => 'The name must be a string.',
+            'name.max' => 'The name may not be greater than :max characters.',
+            'email.required' => 'The email field is required.',
+            'email.email' => 'The email must be a valid email address.',
+            'email.max' => 'The email may not be greater than :max characters.',
+        ];
+
+        // Perform validation
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        // Check if validation fails
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Attempt to update the submitted data
+        try {
+            // Fill the submitted data with the new values
+            $submittedData->name = $request->input('name');
+            $submittedData->email = $request->input('email');
+
+            // Save the updated data
+            $submittedData->save();
+        } catch (\Exception $e) {
+            // Log the error
+            \Log::error('Failed to update data: ' . $e->getMessage());
+
+            // Return an error response
+            return response()->json(['error' => 'Failed to update data.'], 500);
+        }
+
+        // Return a success response
+        return response()->json(['message' => 'Data updated successfully'], 200);
+    }
+
+    public function deleteData($id)
+    {
+        // Find the submitted data by ID
+        $submittedData = SubmittedData::find($id);
+
+        // Check if submitted data exists
+        if (!$submittedData) {
+            return response()->json(['error' => 'Submitted data not found'], 404);
+        }
+
+        // Attempt to delete the submitted data
+        try {
+            // Delete the submitted data
+            $submittedData->delete();
+        } catch (\Exception $e) {
+            // Log the error
+            \Log::error('Failed to delete data: ' . $e->getMessage());
+
+            // Return an error response
+            return response()->json(['error' => 'Failed to delete data.'], 500);
+        }
+
+        // Return a success response
+        return response()->json(['message' => 'Data deleted successfully'], 200);
+    } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public function submitData(Request $request)
+    {
+        // Validation rules
+        $rules = [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ];
+        // Validation messages
+        $messages = [
+            'name.required' => 'The name field is required.',
+            'name.string' => 'The name must be a string.',
+            'name.max' => 'The name may not be greater than :max characters.',
+            'email.required' => 'The email field is required.',
+            'email.email' => 'The email must be a valid email address.',
+            'email.max' => 'The email may not be greater than :max characters.',
+        ];
+        // Perform validation
+        $validator = Validator::make($request->all(), $rules, $messages);
+        // Check if validation fails
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+        // Attempt to save the submitted data
+        try {
+            // Create a new SubmittedData instance and fill it with the validated data
+            $submittedData = new SubmittedData();
+            $submittedData->fill($request->all());
+            // Save the submitted data to the database
+            $submittedData->save();
+        } catch (\Exception $e) {
+            // Log the error
+            \Log::error('Failed to save data to the database: ' . $e->getMessage());
+            // Return an error response
+            return response()->json(['error' => 'Failed to save data to the database.'], 500);
+        }
+        // Return a success response
+        return response()->json(['message' => 'Data submitted successfully'], 201);
+    }
